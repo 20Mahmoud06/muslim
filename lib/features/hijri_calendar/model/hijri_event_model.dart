@@ -1,0 +1,34 @@
+class HijriEventModel {
+  final String title;
+  final String arabicTitle;
+  final int day;
+  final int month;
+  final String description;
+  final bool isImportant;
+
+  HijriEventModel({
+    required this.title,
+    required this.arabicTitle,
+    required this.day,
+    required this.month,
+    required this.description,
+    this.isImportant = false,
+  });
+
+  bool isToday(int currentDay, int currentMonth) {
+    return day == currentDay && month == currentMonth;
+  }
+
+  int daysUntil(int currentDay, int currentMonth, int lengthOfMonth) {
+    if (month == currentMonth) {
+      // لو الحدث في نفس الشهر، نرجع الفرق (هيبقى سالب لو فات)
+      return day - currentDay;
+    } else if (month > currentMonth) {
+      // حساب تقريبي
+      return (month - currentMonth) * 29 + (day - currentDay);
+    } else {
+      // الحدث في شهر قادم من السنة القادمة
+      return (12 - currentMonth + month) * 29 + (day - currentDay);
+    }
+  }
+}
