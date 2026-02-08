@@ -124,9 +124,13 @@ geolocator
 lottie
 
 📦 Installation
+
 git clone https://github.com/20Mahmoud06/muslim.git
+
 cd muslim
+
 flutter pub get
+
 flutter run
 
 🛠️ Requirements
