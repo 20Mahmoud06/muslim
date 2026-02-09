@@ -51,8 +51,8 @@ class PrayerTimesService {
       if (!hasPermission) return null;
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: const Duration(seconds: 15),
       );
 
       debugPrint('✅ تم الحصول على الموقع: ${position.latitude}, ${position.longitude}');

@@ -4,32 +4,35 @@ import 'package:intl/intl.dart';
 import 'package:hijri_date/hijri_date.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/custom_text.dart';
+import '../../hijri_calendar/services/hijri_date_service.dart'; // ⭐ NEW
 
-class DateDisplayCard extends StatelessWidget {
+class DateDisplayCard extends StatefulWidget {
   const DateDisplayCard({super.key});
 
-  String _getHijriMonthName(int month) {
-    const months = [
-      'محرم',
-      'صفر',
-      'ربيع الأول',
-      'ربيع الآخر',
-      'جمادى الأولى',
-      'جمادى الآخرة',
-      'رجب',
-      'شعبان',
-      'رمضان',
-      'شوال',
-      'ذو القعدة',
-      'ذو الحجة',
-    ];
-    return months[month - 1];
+  @override
+  State<DateDisplayCard> createState() => _DateDisplayCardState();
+}
+
+class _DateDisplayCardState extends State<DateDisplayCard> {
+  HijriDate? _hijriDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHijriDate();
+  }
+
+  // ⭐ تحميل التاريخ الهجري من الخدمة
+  Future<void> _loadHijriDate() async {
+    final date = await HijriDateService.getCurrentHijriDate();
+    if (mounted) {
+      setState(() => _hijriDate = date);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final hijriDate = HijriDate.now();
     final gregorianFormat = DateFormat('EEEE، d MMMM yyyy', 'ar');
 
     return Padding(
@@ -43,7 +46,7 @@ class DateDisplayCard extends StatelessWidget {
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -87,8 +90,9 @@ class DateDisplayCard extends StatelessWidget {
 
             SizedBox(height: 10.h),
 
-            // التاريخ الهجري
-            Row(
+            // ⭐ التاريخ الهجري - محدث
+            _hijriDate != null
+                ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -99,7 +103,29 @@ class DateDisplayCard extends StatelessWidget {
                 SizedBox(width: 8.w),
                 CustomText(
                   text:
-                  '${hijriDate.hDay} ${_getHijriMonthName(hijriDate.hMonth)} ${hijriDate.hYear} هـ',
+                  '${_hijriDate!.hDay} ${HijriDateService.getArabicMonthName(_hijriDate!.hMonth)} ${_hijriDate!.hYear} هـ',
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w600,
+                  textColor: AppColors.secondaryColor,
+                ),
+              ],
+            )
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 14.w,
+                  height: 14.w,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.secondaryColor,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                CustomText(
+                  text: 'جاري التحميل...',
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w600,
                   textColor: AppColors.secondaryColor,

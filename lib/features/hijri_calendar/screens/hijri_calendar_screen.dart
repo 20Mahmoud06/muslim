@@ -7,6 +7,7 @@ import '../../../shared/custom_text.dart';
 import '../cubit/hijri_calendar_cubit.dart';
 import '../widgets/calendar_day_cell.dart';
 import '../widgets/hijri_month_header.dart';
+import '../widgets/hijri_offset_dialog.dart';
 import '../widgets/upcoming_event_card.dart';
 
 class HijriCalendarScreen extends StatelessWidget {
@@ -43,6 +44,64 @@ class HijriCalendarScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
             textColor: Colors.white,
           ),
+          actions: [
+            BlocBuilder<HijriCalendarCubit, HijriCalendarState>(
+              builder: (context, state) {
+                return IconButton(
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Icon(
+                          Icons.tune_rounded,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
+                      ),
+                      if (state is HijriCalendarLoaded &&
+                          state.monthAdjustments.isNotEmpty)
+                        Positioned(
+                          top: -4,
+                          right: -4,
+                          child: Container(
+                            padding: EdgeInsets.all(4.w),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                            child: CustomText(
+                              text: '${state.monthAdjustments.length}',
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.bold,
+                              textColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<HijriCalendarCubit>(),
+                        child: const HijriAdjustmentDialog(),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+            SizedBox(width: 8.w),
+          ],
         ),
         body: BlocBuilder<HijriCalendarCubit, HijriCalendarState>(
           builder: (context, state) {
@@ -54,7 +113,53 @@ class HijriCalendarScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // رأس الشهر
+                      if (context.read<HijriCalendarCubit>().hasCurrentMonthAdjustment)
+                        Container(
+                          margin: EdgeInsets.only(bottom: 16.h),
+                          padding: EdgeInsets.all(14.w),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.blue.shade50,
+                                Colors.blue.shade100,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: Colors.blue.shade300,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_rounded,
+                                color: Colors.blue.shade700,
+                                size: 22.sp,
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CustomText(
+                                      text: 'الشهر معدّل',
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.bold,
+                                      textColor: Colors.blue.shade900,
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    CustomText(
+                                      text: _getAdjustmentMessage(context),
+                                      fontSize: 12.sp,
+                                      textColor: Colors.blue.shade700,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       HijriMonthHeader(
                         currentDate: state.currentDate,
                         onPreviousMonth: () =>
@@ -64,20 +169,11 @@ class HijriCalendarScreen extends StatelessWidget {
                         onTodayTap: () =>
                             context.read<HijriCalendarCubit>().goToToday(),
                       ),
-
                       SizedBox(height: 20.h),
-
-                      // أيام الأسبوع
                       _buildWeekDaysHeader(),
-
                       SizedBox(height: 12.h),
-
-                      // التقويم
                       _buildCalendarGrid(context, state),
-
                       SizedBox(height: 24.h),
-
-                      // الأحداث القادمة
                       if (state.upcomingEvents.isNotEmpty) ...[
                         Row(
                           children: [
@@ -123,21 +219,17 @@ class HijriCalendarScreen extends StatelessWidget {
                           ],
                         ),
                         SizedBox(height: 16.h),
+                        // ⭐ تحديث: استخدام الدالة الجديدة لحساب الأيام
                         ...state.upcomingEvents.map((event) {
-                          final now = HijriDate.now();
-                          final daysUntil = event.daysUntil(
-                            now.hDay,
-                            now.hMonth,
-                            now.lengthOfMonth,
-                          );
+                          final cubit = context.read<HijriCalendarCubit>();
+                          final daysUntil = cubit.getDaysUntilEvent(event);
+
                           return UpcomingEventCard(
                             event: event,
                             daysUntil: daysUntil,
                           );
                         }),
                       ],
-
-                      // ملاحظة عن الأحداث
                       Container(
                         margin: EdgeInsets.only(top: 16.h),
                         padding: EdgeInsets.all(16.w),
@@ -170,7 +262,6 @@ class HijriCalendarScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-
                       SizedBox(height: 20.h),
                     ],
                   ),
@@ -184,8 +275,26 @@ class HijriCalendarScreen extends StatelessWidget {
     );
   }
 
+  String _getAdjustmentMessage(BuildContext context) {
+    final cubit = context.read<HijriCalendarCubit>();
+    final originalDays = cubit.currentDate.getDaysInMonth(
+      cubit.currentDate.hYear,
+      cubit.currentDate.hMonth,
+    );
+    final adjustedDays = cubit.currentMonthLength;
+    return 'الشهر معدّل إلى $adjustedDays يوم (بدلاً من $originalDays)';
+  }
+
   Widget _buildWeekDaysHeader() {
-    final weekDays = ['السبت','الجمعة','الخميس','الأربعاء','الثلاثاء','الإثنين','الأحد'];
+    final weekDays = [
+      'السبت',
+      'الجمعة',
+      'الخميس',
+      'الأربعاء',
+      'الثلاثاء',
+      'الإثنين',
+      'الأحد'
+    ];
     return Container(
       padding: EdgeInsets.symmetric(vertical: 12.h),
       decoration: BoxDecoration(
@@ -214,34 +323,27 @@ class HijriCalendarScreen extends StatelessWidget {
 
   Widget _buildCalendarGrid(BuildContext context, HijriCalendarLoaded state) {
     final cubit = context.read<HijriCalendarCubit>();
-    final daysInMonth = state.currentDate.lengthOfMonth;
-    final firstDayOfMonth = HijriDate.fromHijri(
+    final daysInMonth = cubit.getAdjustedMonthLength(
       state.currentDate.hYear,
       state.currentDate.hMonth,
-      1,
     );
 
-    final gregorianFirst = firstDayOfMonth.hijriToGregorian(
-      firstDayOfMonth.hYear,
-      firstDayOfMonth.hMonth,
-      firstDayOfMonth.hDay,
+    // ⭐ حساب يوم الأسبوع الصحيح مع مراعاة التعديلات
+    final firstWeekday = cubit.getAdjustedFirstWeekday(
+      state.currentDate.hYear,
+      state.currentDate.hMonth,
     );
-    final firstWeekday = gregorianFirst.weekday == 7 ? 0 : gregorianFirst.weekday;
-
-    final today = HijriDate.now();
-    final isCurrentMonth = state.currentDate.hMonth == today.hMonth &&
-        state.currentDate.hYear == today.hYear;
 
     List<Widget> dayWidgets = [];
-
-    // إضافة خلايا فارغة قبل أول يوم
     for (int i = 0; i < firstWeekday; i++) {
       dayWidgets.add(const SizedBox.shrink());
     }
-
-    // إضافة أيام الشهر
     for (int day = 1; day <= daysInMonth; day++) {
-      final isToday = isCurrentMonth && day == today.hDay;
+      final isToday = cubit.isToday(
+        day,
+        state.currentDate.hMonth,
+        state.currentDate.hYear,
+      );
       final isSelected = state.selectedDate != null &&
           state.selectedDate!.hDay == day &&
           state.selectedDate!.hMonth == state.currentDate.hMonth;

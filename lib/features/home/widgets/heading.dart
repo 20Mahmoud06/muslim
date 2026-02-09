@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../shared/custom_text.dart';
 import '../../prayer_times/models/prayer_times_model.dart';
 import '../../prayer_times/services/prayer_times_service.dart';
+import '../../hijri_calendar/services/hijri_date_service.dart'; // ⭐ NEW
 import 'home_pattern_painter.dart';
 
 class Heading extends StatefulWidget {
@@ -20,50 +21,14 @@ class _HeadingState extends State<Heading> {
   String _cityName = 'جاري التحميل...';
   String _countdown = '٠٠:٠٠:٠٠';
   Timer? _countdownTimer;
-  final HijriDate _hijriDate = HijriDate.now();
 
-  String _toArabicNumbers(String input) {
-    const english = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-
-    String output = input;
-    for (int i = 0; i < english.length; i++) {
-      output = output.replaceAll(english[i], arabic[i]);
-    }
-    return output;
-  }
-
-  // ⭐ تحويل اسم الصلاة من الإنجليزي للعربي مع معالجة "After"
-  String _getNextPrayerNameInArabic() {
-    if (_prayerTimes == null) return '...';
-
-    String prayerName = _prayerTimes!.nextPrayer.toLowerCase();
-
-    // إزالة "after" من اسم الصلاة
-    prayerName = prayerName.replaceAll('after', '');
-
-    // تحويل للعربي
-    switch (prayerName) {
-      case 'fajr':
-        return 'الفجر';
-      case 'sunrise':
-        return 'الشروق';
-      case 'dhuhr':
-        return 'الظهر';
-      case 'asr':
-        return 'العصر';
-      case 'maghrib':
-        return 'المغرب';
-      case 'isha':
-        return 'العشاء';
-      default:
-        return prayerName; // في حالة اسم غير متوقع
-    }
-  }
+  // ⭐ تغيير: استخدام nullable و تحديث ديناميكي
+  HijriDate? _hijriDate;
 
   @override
   void initState() {
     super.initState();
+    _loadHijriDate(); // ⭐ تحميل التاريخ الهجري
     _loadPrayerTimes();
     _startCountdownTimer();
   }
@@ -74,9 +39,34 @@ class _HeadingState extends State<Heading> {
     super.dispose();
   }
 
+  // ⭐ NEW: تحميل التاريخ الهجري من الخدمة
+  Future<void> _loadHijriDate() async {
+    final date = await HijriDateService.getCurrentHijriDate();
+    if (mounted) {
+      setState(() => _hijriDate = date);
+    }
+  }
+
+  // ⭐ تحويل اسم الصلاة من الإنجليزي للعربي
+  String _getNextPrayerNameInArabic() {
+    if (_prayerTimes == null) return '...';
+
+    String prayerName = _prayerTimes!.nextPrayer.toLowerCase();
+    prayerName = prayerName.replaceAll('after', '');
+
+    switch (prayerName) {
+      case 'fajr': return 'الفجر';
+      case 'sunrise': return 'الشروق';
+      case 'dhuhr': return 'الظهر';
+      case 'asr': return 'العصر';
+      case 'maghrib': return 'المغرب';
+      case 'isha': return 'العشاء';
+      default: return prayerName;
+    }
+  }
+
   Future<void> _loadPrayerTimes() async {
     try {
-      // ⭐ استخدام checkAndUpdateLocation بدلاً من getSavedLocation
       final location = await PrayerTimesService.checkAndUpdateLocation();
 
       if (location != null) {
@@ -116,8 +106,7 @@ class _HeadingState extends State<Heading> {
 
           if (mounted) {
             setState(() {
-              // تحويل للأرقام العربية
-              _countdown = _toArabicNumbers('$hours:$minutes:$seconds');
+              _countdown = HijriDateService.toArabicNumbers('$hours:$minutes:$seconds');
             });
           }
         }
@@ -161,11 +150,12 @@ class _HeadingState extends State<Heading> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // التاريخ الهجري - قابل للضغط
+                        // ⭐ التاريخ الهجري - محدث
                         GestureDetector(
-                          onTap: () {
-                            // التنقل لصفحة التاريخ الهجري
-                            Navigator.pushNamed(context, '/hijri_calendar');
+                          onTap: () async {
+                            await Navigator.pushNamed(context, '/hijri_calendar');
+                            // ⭐ تحديث التاريخ بعد الرجوع (في حالة التعديل)
+                            _loadHijriDate();
                           },
                           child: Row(
                             children: [
@@ -175,9 +165,17 @@ class _HeadingState extends State<Heading> {
                                 size: 20.sp,
                               ),
                               SizedBox(width: 5.w),
-                              CustomText(
-                                text:
-                                '${_toArabicNumbers(_hijriDate.hDay.toString())} ${_getHijriMonthName(_hijriDate.hMonth)} ${_toArabicNumbers(_hijriDate.hYear.toString())}هـ',
+                              // ⭐ عرض التاريخ من الخدمة
+                              _hijriDate != null
+                                  ? CustomText(
+                                text: HijriDateService.toArabicNumbers(
+                                  '${_hijriDate!.hDay} ${HijriDateService.getArabicMonthName(_hijriDate!.hMonth)} ${_hijriDate!.hYear}هـ',
+                                ),
+                                textColor: Colors.white,
+                                fontSize: 15.sp,
+                              )
+                                  : CustomText(
+                                text: 'جاري التحميل...',
                                 textColor: Colors.white,
                                 fontSize: 15.sp,
                               ),
@@ -186,7 +184,7 @@ class _HeadingState extends State<Heading> {
                         ),
                         SizedBox(height: 12.h),
 
-                        // الصلاة القادمة - محدثة ⭐
+                        // الصلاة القادمة
                         Row(
                           children: [
                             SizedBox(width: 5.w),
@@ -227,7 +225,7 @@ class _HeadingState extends State<Heading> {
                 ),
                 SizedBox(height: 10.h),
 
-                // العد التنازلي بالأرقام العربية
+                // العد التنازلي
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -243,7 +241,7 @@ class _HeadingState extends State<Heading> {
                 ),
                 SizedBox(height: 8.h),
 
-                // الموقع (اسم المحافظة)
+                // الموقع
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -266,23 +264,5 @@ class _HeadingState extends State<Heading> {
         ],
       ),
     );
-  }
-
-  String _getHijriMonthName(int month) {
-    const months = [
-      'محرم',
-      'صفر',
-      'ربيع الأول',
-      'ربيع الآخر',
-      'جمادى الأولى',
-      'جمادى الآخرة',
-      'رجب',
-      'شعبان',
-      'رمضان',
-      'شوال',
-      'ذو القعدة',
-      'ذو الحجة',
-    ];
-    return months[month - 1];
   }
 }

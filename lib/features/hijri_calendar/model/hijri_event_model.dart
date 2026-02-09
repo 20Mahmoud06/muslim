@@ -19,15 +19,14 @@ class HijriEventModel {
     return day == currentDay && month == currentMonth;
   }
 
+  // ⭐ هذه الدالة لم تعد تُستخدم - الحساب أصبح في Cubit
+  // تركتها للتوافق لو في كود قديم يستخدمها
   int daysUntil(int currentDay, int currentMonth, int lengthOfMonth) {
     if (month == currentMonth) {
-      // لو الحدث في نفس الشهر، نرجع الفرق (هيبقى سالب لو فات)
       return day - currentDay;
     } else if (month > currentMonth) {
-      // حساب تقريبي
       return (month - currentMonth) * 29 + (day - currentDay);
     } else {
-      // الحدث في شهر قادم من السنة القادمة
       return (12 - currentMonth + month) * 29 + (day - currentDay);
     }
   }

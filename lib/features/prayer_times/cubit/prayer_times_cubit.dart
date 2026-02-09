@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/prayer_times_model.dart';
 import '../services/prayer_times_service.dart';
 import '../../notifications/services/notification_service.dart';
 import 'prayer_times_state.dart';
