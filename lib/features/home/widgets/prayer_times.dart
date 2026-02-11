@@ -203,7 +203,7 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
               ],
             ),
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 2.w),
+              padding: EdgeInsets.symmetric(vertical: 12.h,),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -265,7 +265,7 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
                           child: CustomText(
                             text: _to12Hour(time),
                             textAlign: TextAlign.center,
-                            fontSize: 13.sp,
+                            fontSize: 12.sp,
                             fontWeight: FontWeight.bold,
                             textColor: isNext ? Colors.white : Colors.black87,
                           ),

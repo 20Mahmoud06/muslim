@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     const Heading(),
                     Positioned(
-                      top: headerHeight - 60.h,
+                      top: headerHeight - 63.h,
                       left: 16.w,
                       right: 16.w,
                       child: const PrayerTimesWidget(),
