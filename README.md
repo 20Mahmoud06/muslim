@@ -1,129 +1,134 @@
-# 🕌 Muslim App – Flutter Islamic Application
+<p align="center">
+  <img src="assets/Muslim.png" width="100%" />
+</p>
 
-A **complete Islamic mobile application** built with **Flutter**, focused on performance, clean architecture, and a beautiful user experience even on low-end devices.  
-The app works as a **daily Muslim companion** providing prayer times, Quran, Hadith, Azkar, Qibla direction, Hijri calendar, and more.
+<h1 align="center">🕌 Muslim App</h1>
+
+<p align="center">
+A complete Islamic companion built with Flutter.
+<br/>
+Fast • Clean • Lightweight • Sadaqah Jariyah 🤍
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Flutter-3.x-blue?style=for-the-badge&logo=flutter" />
+  <img src="https://img.shields.io/badge/Architecture-Clean-green?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/State%20Management-Bloc/Cubit-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/License-Open%20Source-lightgrey?style=for-the-badge" />
+</p>
 
 ---
 
-## 📱 Features
+## 🚀 Overview
+
+Muslim App is a complete Islamic mobile application built with Flutter, designed to be a daily spiritual companion.
+
+It focuses on:
+
+- ⚡ Performance
+- 🧠 Clean Architecture
+- 🎨 Beautiful & minimal UI
+- 📱 Smooth experience even on low-end devices
+
+---
+
+## 📱 Core Features
 
 ### 🕋 Prayer Times
-- Accurate prayer times based on user location
+- Accurate location-based prayer times
 - Daily updated timings
-- Detailed prayer times screen
-- Error handling for location issues
+- Detailed prayer schedule
+- Smart error handling
 
 ### 🧭 Qibla Direction
-- Compass-based Qibla detection
-- Real-time direction updates
-- Clear error & loading states
+- Real-time compass detection
+- Smooth directional updates
+- Clear loading & error states
 
 ### 📖 Quran
-- Simple and clean Quran reading screen
-- Optimized for readability
-- Smooth navigation
+- Clean and distraction-free reading screen
+- Optimized typography
+- Smooth Surah navigation
 
 ### 📜 Hadith
 - Authentic Hadith collection
 - Daily Hadith feature
 - Adjustable font size
-- Clean reading experience
+- Comfortable reading layout
 
 ### 🌙 Azkar
 - Morning & Evening Azkar
-- Categorized Azkar
+- Categorized sections
 - Progress tracking
-- Easy navigation between Azkar
+- Smooth navigation
 
-### 🕌 Allah Names
-- 99 Names of Allah
+### 📿 Digital Tasbih
+- Counter with goal tracking
+- Progress indicator
+- Minimal & elegant UI
+
+### 🕌 99 Names of Allah
 - Meaning & reflection view
-- Beautiful UI with custom painters
+- Beautiful custom UI
+- Islamic patterns using Custom Painters
 
 ### 📅 Hijri Calendar
-- Hijri date display
-- Important Islamic events
+- Accurate Hijri date
+- Islamic events
 - Upcoming events section
 
-### 🔔 Notifications
-- Daily Azkar notifications
-- Daily Hadith notification
-- Custom notification settings
-- Xiaomi permission handling
+### 🔔 Smart Notifications
+- Daily Azkar reminder
+- Daily Hadith reminder
+- Customizable notification settings
+- Xiaomi background permission handling
 
-### 📿 Tasbih
-- Digital Tasbih counter
-- Goal selection
-- Progress indicator
-- Clean and simple UI
-
-### 🚀 Onboarding
+### 🚀 Onboarding Flow
 - Welcome screen
-- Location permission screen
-- Notification permission screen
-- Smooth onboarding flow
+- Location permission
+- Notification permission
+- Smooth first-time experience
 
 ---
 
 ## 🧠 Architecture
 
-The project follows a **Clean & Scalable Architecture**:
+This project follows a scalable Clean Architecture approach.
 
-🧩 State Management
+### 🧩 State Management
+- Flutter Bloc / Cubit
+- Clear separation of UI & business logic
+- Predictable and testable states
 
-Flutter Bloc / Cubit
+### 🎨 UI & Design
+- Fully custom UI
+- Custom Painters for Islamic patterns
+- Responsive layout
+- Dark-friendly color palette
+- Optimized for all screen sizes
 
-Clear separation of UI & business logic
+---
 
-Predictable and testable states
+## 🛠️ Tech Stack
 
-🎨 UI & Design
+| Technology | Purpose |
+|------------|----------|
+| Flutter | Cross-platform framework |
+| Dart | Programming language |
+| Bloc / Cubit | State management |
+| REST APIs | Data sources |
+| Geolocator | Location services |
+| Awesome Notifications | Local notifications |
+| adhan_dart | Prayer times calculations |
+| hijri_date | Hijri calendar |
+| flutter_qiblah | Qibla direction |
+| quran_library | Quran data |
 
-Fully custom UI
+---
 
-Custom Painters for Islamic patterns
+## 📦 Installation
 
-Responsive layout
-
-Optimized for small & large screens
-
-Dark-friendly color palette
-
-⚙️ Tech Stack
-
-Flutter
-
-Dart
-
-Bloc / Cubit
-
-REST APIs
-
-Location Services
-
-Local Notifications
-
-Clean Code Principles
-
-📦 Dependencies
-
-Some of the main libraries used in this project:
-
-quran_library
-
-adhan_dart
-
-hijri_date
-
-flutter_qiblah
-
-awesome_notifications
-
-geolocator
-
-lottie
-
-📦 Installation
+bash
 
 git clone https://github.com/20Mahmoud06/muslim.git
 
@@ -139,33 +144,31 @@ Flutter SDK (latest stable)
 
 Dart SDK
 
-Android Studio or VS Code
+Android Studio / VS Code
 
 Android device or emulator
 
-🌟 Performance
+🌟 Performance Focus
 
 Optimized for low-end devices
 
 Minimal rebuilds
 
+Efficient state handling
+
 Lightweight UI components
 
-Efficient state handling
+Clean and maintainable code
 
 🤝 Contribution
 
-Contributions are welcome!
+Contributions are welcome 🤍
 Feel free to open an issue or submit a pull request.
 
 📄 License
 
 This project is open-source and intended to be a Sadaqah Jariyah.
-Use it, improve it, and share the reward 🤍
 
-👤 Author
+Use it, improve it, and share the reward 🤲
 
-Mahmoud Safa
-Flutter Developer
-
-📌 GitHub: https://github.com/20Mahmoud06
+<p align="center"> Built with sincerity by Mahmoud Safa 🕌 </p>
