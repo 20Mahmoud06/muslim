@@ -50,9 +50,7 @@ class PrayerTimesModel {
       nextPrayer: next.name ?? '',
 
       // ⭐ تحويل وقت الصلاة القادمة للتوقيت المحلي
-      nextPrayerTime: prayerTimes.timeForPrayer(next) != null
-          ? _toLocalTime(prayerTimes.timeForPrayer(next)!)
-          : null,
+      nextPrayerTime: _toLocalTime(prayerTimes.timeForPrayer(next)),
     );
   }
 

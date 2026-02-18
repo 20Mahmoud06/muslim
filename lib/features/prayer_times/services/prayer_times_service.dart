@@ -51,7 +51,7 @@ class PrayerTimesService {
       if (!hasPermission) return null;
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        desiredAccuracy: LocationAccuracy.best,
         timeLimit: const Duration(seconds: 15),
       );
 
@@ -71,22 +71,66 @@ class PrayerTimesService {
       if (placemarks.isNotEmpty) {
         final placemark = placemarks.first;
 
-        String cityName = placemark.locality ??
-            placemark.administrativeArea ??
-            placemark.country ??
-            'موقعك الحالي';
+        // Hierarchy: locality → subAdministrativeArea → administrativeArea → country
+        String? cityName = _extractBestCityName(placemark);
 
-        cityName = cityName
-            .replaceAll(' Governorate', '')
-            .replaceAll('محافظة ', '')
-            .trim();
+        if (cityName != null && cityName.isNotEmpty) {
+          cityName = cityName
+              .replaceAll(' Governorate', '')
+              .replaceAll('محافظة ', '')
+              .replaceAll(' governorate', '')
+              .trim();
 
-        debugPrint('✅ اسم المدينة: $cityName');
-        return cityName;
+          debugPrint('✅ اسم المدينة: $cityName');
+          return cityName;
+        }
+      }
+
+      // Fallback: جرب مرة تانية بـ locale مختلف
+      return await _getCityNameFallback(latitude, longitude);
+    } catch (e) {
+      debugPrint('خطأ في الحصول على اسم المدينة: $e');
+      return await _getCityNameFallback(latitude, longitude);
+    }
+  }
+
+  static String? _extractBestCityName(Placemark placemark) {
+    // جرب كل الحقول بالترتيب
+    final candidates = [
+      placemark.locality,
+      placemark.subLocality,
+      placemark.subAdministrativeArea,
+      placemark.administrativeArea,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate != null && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+    return null;
+  }
+
+  static Future<String?> _getCityNameFallback(double lat, double lon) async {
+    try {
+      // انتظر شوية وجرب تاني
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lon);
+      if (placemarks.isNotEmpty) {
+        for (final placemark in placemarks) {
+          final name = _extractBestCityName(placemark);
+          if (name != null && name.isNotEmpty) {
+            return name
+                .replaceAll(' Governorate', '')
+                .replaceAll('محافظة ', '')
+                .trim();
+          }
+        }
       }
       return null;
     } catch (e) {
-      debugPrint('خطأ في الحصول على اسم المدينة: $e');
+      debugPrint('فشل الـ fallback: $e');
       return null;
     }
   }
@@ -104,19 +148,32 @@ class PrayerTimesService {
     }
   }
 
+// مدة صلاحية الموقع المحفوظ = 30 دقيقة
+  static const int _locationCacheMinutes = 30;
+
   static Future<Map<String, dynamic>?> getSavedLocation() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lat = prefs.getDouble(_latKey);
       final lon = prefs.getDouble(_lonKey);
       final city = prefs.getString(_cityKey);
+      final lastCheck = prefs.getInt(_lastLocationCheckKey) ?? 0;
 
       if (lat != null && lon != null) {
-        debugPrint('✅ تم استرجاع الموقع المحفوظ: $city');
+        final lastCheckTime = DateTime.fromMillisecondsSinceEpoch(lastCheck);
+        final minutesSinceLastCheck =
+            DateTime.now().difference(lastCheckTime).inMinutes;
+
+        debugPrint('⏱️ آخر تحقق من الموقع: منذ $minutesSinceLastCheck دقيقة');
+
+        // لو فات أكتر من 30 دقيقة، مش موثوق
+        final bool isFresh = minutesSinceLastCheck < _locationCacheMinutes;
+
         return {
           'latitude': lat,
           'longitude': lon,
           'city': city ?? 'موقعك الحالي',
+          'isFresh': isFresh,
         };
       }
       return null;
@@ -129,66 +186,110 @@ class PrayerTimesService {
   static Future<Map<String, dynamic>?> checkAndUpdateLocation() async {
     try {
       final savedLocation = await getSavedLocation();
-      final currentPosition = await getCurrentLocation();
+      final bool savedIsFresh = savedLocation?['isFresh'] == true;
 
-      if (currentPosition == null) {
-        debugPrint('⚠️ لا يمكن الحصول على الموقع الحالي');
+      // لو الموقع المحفوظ حديث (أقل من 30 دقيقة)، استخدمه مباشرة
+      if (savedIsFresh) {
+        debugPrint('✅ الموقع المحفوظ حديث، لا حاجة للتحديث');
         return savedLocation;
       }
 
-      if (savedLocation == null) {
-        final cityName = await getCityName(
-          currentPosition.latitude,
-          currentPosition.longitude,
-        );
-        await saveLocation(
-          currentPosition.latitude,
-          currentPosition.longitude,
-          cityName ?? 'موقعك الحالي',
-        );
-        return {
-          'latitude': currentPosition.latitude,
-          'longitude': currentPosition.longitude,
-          'city': cityName ?? 'موقعك الحالي',
-        };
+      debugPrint('🔄 الموقع قديم أو غير موجود، جاري التحقق من الموقع الحالي...');
+
+      final currentPosition = await getCurrentLocation();
+
+      if (currentPosition == null) {
+        debugPrint('⚠️ لا يمكن الحصول على الموقع الحالي، استخدام المحفوظ');
+        if (savedLocation != null) {
+          // حدّث وقت الـ check حتى لو فشلنا
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt(_lastLocationCheckKey,
+              DateTime.now().millisecondsSinceEpoch);
+        }
+        return savedLocation;
       }
 
-      final distance = Geolocator.distanceBetween(
-        savedLocation['latitude'],
-        savedLocation['longitude'],
+      // لو في موقع محفوظ، قارن المسافة
+      if (savedLocation != null) {
+        final distance = Geolocator.distanceBetween(
+          savedLocation['latitude'],
+          savedLocation['longitude'],
+          currentPosition.latitude,
+          currentPosition.longitude,
+        );
+
+        final distanceKm = distance / 1000;
+        debugPrint('📍 المسافة: ${distanceKm.toStringAsFixed(2)} كم');
+
+        if (distanceKm <= _locationUpdateThresholdKm) {
+          // نفس المنطقة تقريباً، حدّث الـ timestamp بس
+          debugPrint('📍 نفس المنطقة، تحديث الوقت فقط');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt(_lastLocationCheckKey,
+              DateTime.now().millisecondsSinceEpoch);
+
+          // لو اسم المدينة فاضي، حاول تجيبه
+          if (savedLocation['city'] == 'موقعك الحالي') {
+            final cityName = await getCityName(
+              currentPosition.latitude,
+              currentPosition.longitude,
+            );
+            if (cityName != null && cityName.isNotEmpty) {
+              await saveLocation(
+                savedLocation['latitude'],
+                savedLocation['longitude'],
+                cityName,
+              );
+              return {...savedLocation, 'city': cityName};
+            }
+          }
+
+          return savedLocation;
+        }
+      }
+
+      // موقع جديد أو تغيّر بشكل كبير
+      debugPrint('🔄 الموقع تغيّر، جاري التحديث...');
+      final cityName = await getCityName(
         currentPosition.latitude,
         currentPosition.longitude,
       );
 
-      final distanceKm = distance / 1000;
+      final finalCity = cityName ?? await _getAdminAreaName(
+        currentPosition.latitude,
+        currentPosition.longitude,
+      ) ?? 'موقعك الحالي';
 
-      debugPrint('📍 المسافة بين الموقع المحفوظ والحالي: ${distanceKm.toStringAsFixed(2)} كم');
+      await saveLocation(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        finalCity,
+      );
 
-      if (distanceKm > _locationUpdateThresholdKm) {
-        debugPrint('🔄 الموقع تغير بشكل كبير، جاري التحديث...');
-        final cityName = await getCityName(
-          currentPosition.latitude,
-          currentPosition.longitude,
-        );
-
-        await saveLocation(
-          currentPosition.latitude,
-          currentPosition.longitude,
-          cityName ?? 'موقعك الحالي',
-        );
-
-        return {
-          'latitude': currentPosition.latitude,
-          'longitude': currentPosition.longitude,
-          'city': cityName ?? 'موقعك الحالي',
-        };
-      }
-
-      return savedLocation;
-
+      return {
+        'latitude': currentPosition.latitude,
+        'longitude': currentPosition.longitude,
+        'city': finalCity,
+      };
     } catch (e) {
-      debugPrint('خطأ في فحص وتحديث الموقع: $e');
+      debugPrint('خطأ في checkAndUpdateLocation: $e');
       return await getSavedLocation();
+    }
+  }
+
+// جلب اسم المحافظة كـ fallback أخير
+  static Future<String?> _getAdminAreaName(double lat, double lon) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lon);
+      if (placemarks.isNotEmpty) {
+        return placemarks.first.administrativeArea
+            ?.replaceAll(' Governorate', '')
+            .replaceAll('محافظة ', '')
+            .trim();
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 

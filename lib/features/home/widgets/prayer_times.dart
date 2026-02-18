@@ -27,36 +27,18 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
 
   Future<void> _loadPrayerTimes() async {
     try {
-      final savedLocation = await PrayerTimesService.getSavedLocation();
+      // دايماً استخدم checkAndUpdateLocation بدل getSavedLocation
+      final location = await PrayerTimesService.checkAndUpdateLocation();
 
-      double? lat;
-      double? lon;
-      String? city;
-
-      if (savedLocation != null) {
-        lat = savedLocation['latitude'];
-        lon = savedLocation['longitude'];
-        city = savedLocation['city'];
-      } else {
-        final position = await PrayerTimesService.getCurrentLocation();
-        if (position != null) {
-          lat = position.latitude;
-          lon = position.longitude;
-          city = await PrayerTimesService.getCityName(lat, lon);
-          await PrayerTimesService.saveLocation(
-              lat, lon, city ?? 'موقعك الحالي');
-        }
-      }
-
-      if (lat != null && lon != null) {
+      if (location != null) {
         final prayerTimes = await PrayerTimesService.calculatePrayerTimes(
-          latitude: lat,
-          longitude: lon,
+          latitude: location['latitude'],
+          longitude: location['longitude'],
         );
 
         setState(() {
           _prayerTimes = prayerTimes;
-          _cityName = city ?? 'موقعك الحالي';
+          _cityName = location['city'] ?? 'موقعك الحالي';
           _isLoading = false;
         });
       } else {
@@ -70,7 +52,7 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
         _cityName = 'موقعك الحالي';
         _isLoading = false;
       });
-      print('خطأ في تحميل المواقيت: $e');
+      debugPrint('خطأ في تحميل المواقيت: $e');
     }
   }
 

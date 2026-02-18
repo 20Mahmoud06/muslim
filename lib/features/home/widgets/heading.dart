@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hijri_date/hijri_date.dart';
 import 'dart:async';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/custom_text.dart';
 import '../../prayer_times/models/prayer_times_model.dart';
 import '../../prayer_times/services/prayer_times_service.dart';
-import '../../hijri_calendar/services/hijri_date_service.dart'; // ⭐ NEW
+import '../../hijri_calendar/model/hijri_date_result.dart';
+import '../../hijri_calendar/services/hijri_date_service.dart';
 import 'home_pattern_painter.dart';
 
 class Heading extends StatefulWidget {
@@ -21,60 +21,56 @@ class _HeadingState extends State<Heading> {
   String _cityName = 'جاري التحميل...';
   String _countdown = '٠٠:٠٠:٠٠';
   Timer? _countdownTimer;
-
-  // ⭐ تغيير: استخدام nullable و تحديث ديناميكي
-  HijriDate? _hijriDate;
+  HijriDateResult? _hijriDate;
 
   @override
   void initState() {
     super.initState();
-    _loadHijriDate(); // ⭐ تحميل التاريخ الهجري
+    // ✅ نسمع على الـ notifier أولاً قبل أي حاجة
+    HijriDateService.adjustmentNotifier.addListener(_onAdjustmentChanged);
     _loadPrayerTimes();
     _startCountdownTimer();
+    // ✅ نحمل التاريخ بعد أول frame عشان نضمن إن الـ repository خلص تحميله
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadHijriDate());
   }
+
+  void _onAdjustmentChanged() => _loadHijriDate();
 
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    HijriDateService.adjustmentNotifier.removeListener(_onAdjustmentChanged);
     super.dispose();
   }
 
-  // ⭐ NEW: تحميل التاريخ الهجري من الخدمة
   Future<void> _loadHijriDate() async {
     final date = await HijriDateService.getCurrentHijriDate();
-    if (mounted) {
-      setState(() => _hijriDate = date);
-    }
+    if (mounted) setState(() => _hijriDate = date);
   }
 
-  // ⭐ تحويل اسم الصلاة من الإنجليزي للعربي
   String _getNextPrayerNameInArabic() {
     if (_prayerTimes == null) return '...';
-
-    String prayerName = _prayerTimes!.nextPrayer.toLowerCase();
-    prayerName = prayerName.replaceAll('after', '');
-
+    String prayerName =
+    _prayerTimes!.nextPrayer.toLowerCase().replaceAll('after', '');
     switch (prayerName) {
-      case 'fajr': return 'الفجر';
+      case 'fajr':    return 'الفجر';
       case 'sunrise': return 'الشروق';
-      case 'dhuhr': return 'الظهر';
-      case 'asr': return 'العصر';
+      case 'dhuhr':   return 'الظهر';
+      case 'asr':     return 'العصر';
       case 'maghrib': return 'المغرب';
-      case 'isha': return 'العشاء';
-      default: return prayerName;
+      case 'isha':    return 'العشاء';
+      default:        return prayerName;
     }
   }
 
   Future<void> _loadPrayerTimes() async {
     try {
       final location = await PrayerTimesService.checkAndUpdateLocation();
-
       if (location != null) {
         final prayerTimes = await PrayerTimesService.calculatePrayerTimes(
           latitude: location['latitude'],
           longitude: location['longitude'],
         );
-
         if (mounted) {
           setState(() {
             _prayerTimes = prayerTimes;
@@ -82,31 +78,24 @@ class _HeadingState extends State<Heading> {
           });
         }
       }
-    } catch (e) {
-      print('خطأ في تحميل المواقيت: $e');
-      if (mounted) {
-        setState(() => _cityName = 'غير محدد');
-      }
+    } catch (_) {
+      if (mounted) setState(() => _cityName = 'غير محدد');
     }
   }
 
   void _startCountdownTimer() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_prayerTimes?.nextPrayerTime != null) {
-        final now = DateTime.now();
-        final nextPrayer = _prayerTimes!.nextPrayerTime!;
-        final difference = nextPrayer.difference(now);
-
+        final difference = _prayerTimes!.nextPrayerTime!.difference(DateTime.now());
         if (difference.isNegative) {
           _loadPrayerTimes();
         } else {
-          final hours = difference.inHours.toString().padLeft(2, '0');
-          final minutes = (difference.inMinutes % 60).toString().padLeft(2, '0');
-          final seconds = (difference.inSeconds % 60).toString().padLeft(2, '0');
-
+          final h = difference.inHours.toString().padLeft(2, '0');
+          final m = (difference.inMinutes % 60).toString().padLeft(2, '0');
+          final s = (difference.inSeconds % 60).toString().padLeft(2, '0');
           if (mounted) {
             setState(() {
-              _countdown = HijriDateService.toArabicNumbers('$hours:$minutes:$seconds');
+              _countdown = HijriDateService.toArabicNumbers('$h:$m:$s');
             });
           }
         }
@@ -123,21 +112,9 @@ class _HeadingState extends State<Heading> {
       height: headerHeight,
       child: Stack(
         children: [
-          // الخلفية الخضراء
-          Container(
-            width: double.infinity,
-            height: headerHeight,
-            color: AppColors.primaryColor,
-          ),
-
-          // الزخرفة الإسلامية
-          Positioned.fill(
-            child: CustomPaint(
-              painter: HomePatternPainter(),
-            ),
-          ),
-
-          // المحتوى الأساسي
+          Container(width: double.infinity, height: headerHeight,
+              color: AppColors.primaryColor),
+          Positioned.fill(child: CustomPaint(painter: HomePatternPainter())),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 10.0.w, vertical: 2.h),
             child: Column(
@@ -150,26 +127,23 @@ class _HeadingState extends State<Heading> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ⭐ التاريخ الهجري - محدث
                         GestureDetector(
                           onTap: () async {
                             await Navigator.pushNamed(context, '/hijri_calendar');
-                            // ⭐ تحديث التاريخ بعد الرجوع (في حالة التعديل)
+                            HijriDateService.clearCache();
                             _loadHijriDate();
                           },
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.calendar_month_outlined,
-                                color: Colors.white,
-                                size: 20.sp,
-                              ),
+                              Icon(Icons.calendar_month_outlined,
+                                  color: Colors.white, size: 20.sp),
                               SizedBox(width: 5.w),
-                              // ⭐ عرض التاريخ من الخدمة
                               _hijriDate != null
                                   ? CustomText(
                                 text: HijriDateService.toArabicNumbers(
-                                  '${_hijriDate!.hDay} ${HijriDateService.getArabicMonthName(_hijriDate!.hMonth)} ${_hijriDate!.hYear}هـ',
+                                  '${_hijriDate!.hDay} '
+                                      '${HijriDateService.getArabicMonthName(_hijriDate!.hMonth)} '
+                                      '${_hijriDate!.hYear}هـ',
                                 ),
                                 textColor: Colors.white,
                                 fontSize: 15.sp,
@@ -183,31 +157,23 @@ class _HeadingState extends State<Heading> {
                           ),
                         ),
                         SizedBox(height: 12.h),
-
-                        // الصلاة القادمة
                         Row(
                           children: [
                             SizedBox(width: 5.w),
                             RichText(
                               text: TextSpan(
                                 style: DefaultTextStyle.of(context).style,
-                                children: <TextSpan>[
+                                children: [
                                   TextSpan(
                                     text: 'الصلاة القادمة: ',
-                                    style: TextStyle(
-                                      fontSize: 15.sp,
-                                      color: Colors.white,
-                                      fontFamily: 'cairo',
-                                    ),
+                                    style: TextStyle(fontSize: 15.sp,
+                                        color: Colors.white, fontFamily: 'cairo'),
                                   ),
                                   TextSpan(
                                     text: _getNextPrayerNameInArabic(),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15.sp,
-                                      fontFamily: 'cairo',
-                                    ),
+                                    style: TextStyle(color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15.sp, fontFamily: 'cairo'),
                                   ),
                                 ],
                               ),
@@ -217,15 +183,10 @@ class _HeadingState extends State<Heading> {
                         SizedBox(height: 10.h),
                       ],
                     ),
-                    Image.asset(
-                      'assets/logo/quran-small.png',
-                      width: 70.w,
-                    ),
+                    Image.asset('assets/logo/quran-small.png', width: 70.w),
                   ],
                 ),
                 SizedBox(height: 10.h),
-
-                // العد التنازلي
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -240,22 +201,13 @@ class _HeadingState extends State<Heading> {
                   ],
                 ),
                 SizedBox(height: 8.h),
-
-                // الموقع
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.location_on,
-                      color: Colors.white,
-                      size: 20.sp,
-                    ),
+                    Icon(Icons.location_on, color: Colors.white, size: 20.sp),
                     SizedBox(width: 5.w),
-                    CustomText(
-                      text: _cityName,
-                      textColor: Colors.white,
-                      fontSize: 15.sp,
-                    ),
+                    CustomText(text: _cityName,
+                        textColor: Colors.white, fontSize: 15.sp),
                   ],
                 ),
               ],

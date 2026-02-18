@@ -130,7 +130,7 @@ class NotificationService {
           channelKey: NotificationConstants.prayerChannelKey,
           title: title,
           body: body,
-          notificationLayout: NotificationLayout.BigText,
+          notificationLayout: NotificationLayout.Default,
           wakeUpScreen: true,
           fullScreenIntent: false,
           category: NotificationCategory.Reminder,
@@ -149,18 +149,7 @@ class NotificationService {
           allowWhileIdle: true,
           preciseAlarm: true,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'DISMISS',
-            label: 'تم',
-            actionType: ActionType.DismissAction,
-            autoDismissible: true,
-          ),
-        ],
       );
-
-      debugPrint(
-          '✅ تم جدولة إشعار: $title في $hour:${minute.toString().padLeft(2, '0')}');
     } catch (e) {
       debugPrint('❌ خطأ في جدولة إشعار $title: $e');
     }

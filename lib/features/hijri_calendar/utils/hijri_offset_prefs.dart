@@ -4,33 +4,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 class HijriOffsetPrefs {
   static const String _monthAdjustmentsKey = 'hijri_month_adjustments';
 
-  // حفظ تعديلات الأشهر
-  static Future<void> saveMonthAdjustments(Map<String, int> adjustments) async {
+  static Future<void> saveMonthAdjustments(
+      Map<String, int> adjustments) async {
     final prefs = await SharedPreferences.getInstance();
-    // تحويل Map إلى JSON string
-    String jsonString = jsonEncode(adjustments);
-    await prefs.setString(_monthAdjustmentsKey, jsonString);
+    await prefs.setString(_monthAdjustmentsKey, jsonEncode(adjustments));
   }
 
-  // استرجاع تعديلات الأشهر
   static Future<Map<String, int>> getMonthAdjustments() async {
     final prefs = await SharedPreferences.getInstance();
-    String? jsonString = prefs.getString(_monthAdjustmentsKey);
+    final jsonString = prefs.getString(_monthAdjustmentsKey);
 
-    if (jsonString == null || jsonString.isEmpty) {
-      return {};
-    }
+    if (jsonString == null || jsonString.isEmpty) return {};
 
     try {
-      Map<String, dynamic> decoded = jsonDecode(jsonString);
-      // تحويل dynamic values إلى int
+      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
       return decoded.map((key, value) => MapEntry(key, value as int));
-    } catch (e) {
+    } catch (_) {
       return {};
     }
   }
 
-  // إعادة تعيين تعديلات الأشهر
   static Future<void> resetMonthAdjustments() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_monthAdjustmentsKey);

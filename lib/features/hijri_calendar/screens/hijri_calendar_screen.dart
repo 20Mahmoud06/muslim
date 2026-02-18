@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hijri_date/hijri.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../shared/custom_text.dart';
 import '../cubit/hijri_calendar_cubit.dart';

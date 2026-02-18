@@ -1,50 +1,41 @@
+import 'package:flutter/cupertino.dart';
+import '../services/hijri_date_service.dart';
 import '../utils/hijri_offset_prefs.dart';
 
-/// مسؤول عن إدارة التعديلات على الأشهر (التخزين والاسترجاع)
 class MonthAdjustmentsRepository {
   Map<String, int> _adjustments = {};
 
   Map<String, int> get adjustments => Map.unmodifiable(_adjustments);
+  Map<String, int> get manualAdjustments => Map.unmodifiable(_adjustments);
 
-  /// تحميل التعديلات من التخزين
   Future<void> loadAdjustments() async {
     _adjustments = await HijriOffsetPrefs.getMonthAdjustments();
+    // الـ HijriDateService هو المسؤول عن إضافة شعبان الافتراضي
+    // مش محتاجين نعمله هنا
   }
 
-  /// حفظ التعديلات في التخزين
-  Future<void> saveAdjustments() async {
-    await HijriOffsetPrefs.saveMonthAdjustments(_adjustments);
-  }
+  bool hasAdjustment(int year, int month) =>
+      _adjustments.containsKey('$year-$month');
 
-  /// تعديل شهر معين
+  int? getAdjustment(int year, int month) => _adjustments['$year-$month'];
+
   Future<void> adjustMonth(int year, int month, int days) async {
-    String monthKey = '$year-$month';
-    _adjustments[monthKey] = days;
-    await saveAdjustments();
+    _adjustments['$year-$month'] = days;
+    await HijriOffsetPrefs.saveMonthAdjustments(_adjustments);
+    HijriDateService.clearCache();
+    debugPrint('✅ تم تعديل $year-$month إلى $days يوم');
   }
 
-  /// إزالة تعديل شهر معين
   Future<void> removeAdjustment(int year, int month) async {
-    String monthKey = '$year-$month';
-    _adjustments.remove(monthKey);
-    await saveAdjustments();
+    _adjustments.remove('$year-$month');
+    await HijriOffsetPrefs.saveMonthAdjustments(_adjustments);
+    HijriDateService.clearCache();
   }
 
-  /// مسح جميع التعديلات
   Future<void> clearAll() async {
     _adjustments.clear();
     await HijriOffsetPrefs.resetMonthAdjustments();
-  }
-
-  /// التحقق من وجود تعديل على شهر معين
-  bool hasAdjustment(int year, int month) {
-    String monthKey = '$year-$month';
-    return _adjustments.containsKey(monthKey);
-  }
-
-  /// الحصول على تعديل شهر معين
-  int? getAdjustment(int year, int month) {
-    String monthKey = '$year-$month';
-    return _adjustments[monthKey];
+    // ✅ clearCacheAndDefaults عشان يضيف شعبان تاني بعد الـ reset
+    HijriDateService.clearCacheAndDefaults();
   }
 }
