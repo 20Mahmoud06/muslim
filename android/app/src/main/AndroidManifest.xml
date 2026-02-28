@@ -7,30 +7,33 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
-    <!-- ⭐ SCHEDULE_EXACT_ALARM لكل الإصدارات -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-
-    <!-- ⭐ USE_EXACT_ALARM بس للـ API 33+ -->
-    <uses-permission
-        android:name="android.permission.USE_EXACT_ALARM"
-        android:minSdkVersion="33"/>
+    <!-- ✅ USE_EXACT_ALARM بدل SCHEDULE_EXACT_ALARM - مقبولة من Google Play للتطبيقات الدينية -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
 
     <application
         android:label="مسلم"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        android:name="io.flutter.app.FlutterApplication"
 
+        <!-- Boot Receiver لإعادة جدولة الإشعارات بعد إعادة التشغيل -->
         <receiver
             android:name="me.carda.awesome_notifications.core.receivers.NotificationBootReceiver"
-            android:exported="false"
+            android:exported="true"
             android:enabled="true">
-            <intent-filter>
+            <intent-filter android:priority="999">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
+
+        <!-- ✅ مهم جداً - بدونه الإشعارات المجدولة مش بتشتغل -->
+        <receiver
+            android:name="me.carda.awesome_notifications.core.receivers.ScheduledNotificationReceiver"
+            android:exported="false"/>
 
         <activity
             android:name=".MainActivity"
@@ -46,8 +49,8 @@
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme"
-                />
+                android:resource="@style/NormalTheme"/>
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -56,7 +59,7 @@
 
         <meta-data
             android:name="flutterEmbedding"
-            android:value="2" />
+            android:value="2"/>
     </application>
 
     <queries>
